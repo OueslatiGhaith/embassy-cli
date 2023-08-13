@@ -1,0 +1,41 @@
+[package]
+name = "{{ project-name }}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+{% if vendor == "ST" %}
+embassy-stm32 = { version = "0.1.0", features = ["nightly", "defmt", "time-driver-any", "{{ mcu }}", "memory-x", "exti"] }
+{% elsif vendor == "Nordic" %}
+embassy-nrf = { version = "0.1.0", features = ["nightly", "defmt", "{{ mcu }}", "time-driver-rtc1", "gpiote"] }
+{% elsif vendor == "Raspberry" %}
+embassy-rp = { version = "0.1.0", features = ["defmt", "nightly", "time-driver"] }
+{% endif %}
+
+embassy-executor = { version = "0.2.0", features = ["nightly", "arch-cortex-m", "executor-thread", "integrated-timers"] }
+embassy-time = { version = "0.1.2", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-sync = { version = "0.2.0", features = ["defmt"] }
+embassy-futures = { version = "0.1.0" }
+
+panic-probe = { version = "0.3" }
+
+defmt = { version = "0.3" }
+defmt-rtt = { version = "0.4" }
+
+cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.0"
+
+futures = { version = "0.3.17", default-features = false, features = ["async-await"] }
+
+[patch.crates-io]
+{% if vendor == "ST" %}
+embassy-stm32 = { git = "https://github.com/embassy-rs/embassy" }
+{% elsif vendor == "Nordic" %}
+embassy-nrf = { git = "https://github.com/embassy-rs/embassy" }
+{% elsif vendor == "Raspberry" %}
+embassy-rp = { git = "https://github.com/embassy-rs/embassy" }
+{% endif %}
+embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" }

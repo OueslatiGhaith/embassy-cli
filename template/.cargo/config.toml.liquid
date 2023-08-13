@@ -1,0 +1,8 @@
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = "probe-run --chip {{ mcu }} --speed 1000 --connect-under-reset"
+
+[build]
+target = "{{ target }}"
+
+[env]
+DEFMT_LOG = "trace"
