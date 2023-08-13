@@ -10,7 +10,9 @@ pub struct GeneratorConfig {
 pub fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
     let args = GenerateArgs {
         template_path: TemplatePath {
-            path: Some("./template".to_owned()),
+            git: Some("https://github.com/OueslatiGhaith/embassy-cli".to_owned()),
+            branch: Some("dev".to_owned()),
+            subfolder: Some("./template".to_owned()),
             ..Default::default()
         },
         silent: true,
