@@ -1,22 +1,37 @@
-use data::DATA;
-use generate::{create, GeneratorConfig};
+use clap::{Parser, Subcommand};
+use generator::create;
 
-mod data;
-mod generate;
+mod generator;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+pub struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+pub enum Command {
+    /// create a new Embassy project
+    Create {
+        /// Project name
+        #[clap(short, long)]
+        name: Option<String>,
+        /// Vendor
+        #[clap(short, long)]
+        vendor: Option<String>,
+        /// MCU
+        #[clap(short, long)]
+        mcu: Option<String>,
+    },
+}
 
 fn main() -> anyhow::Result<()> {
-    let name = inquire::Text::new("Project name").prompt()?;
-    let vendor = inquire::Select::new("Select a vendor", DATA.vendor_list()).prompt()?;
-    let mcu = inquire::Select::new("Select an MCU", DATA.mcu_list(&vendor)).prompt()?;
-    let target = DATA.target(&mcu);
+    let cli = Cli::parse();
 
-    let config = GeneratorConfig {
-        name,
-        vendor,
-        mcu,
-        target,
-    };
-    create(config)?;
+    match cli.command {
+        Command::Create { name, vendor, mcu } => create(name, vendor, mcu)?,
+    }
 
     Ok(())
 }
