@@ -65,3 +65,39 @@ impl Data {
         Ok(())
     }
 }
+
+/// list of supported embassy crates
+pub enum EmbassyCrates {
+    Executor,
+    Futures,
+    Lora,
+    Nrf,
+    Rp,
+    Stm32Wpan,
+    Stm32,
+    Sync,
+    Time,
+}
+
+impl From<EmbassyCrates> for String {
+    fn from(val: EmbassyCrates) -> Self {
+        match val {
+            EmbassyCrates::Executor => "embassy-executor",
+            EmbassyCrates::Futures => "embassy-futures",
+            EmbassyCrates::Lora => "embassy-lora",
+            EmbassyCrates::Nrf => "embassy-nrf",
+            EmbassyCrates::Rp => "embassy-rp",
+            EmbassyCrates::Stm32Wpan => "embassy-stm32-wpan",
+            EmbassyCrates::Stm32 => "embassy-stm32",
+            EmbassyCrates::Sync => "embassy-sync",
+            EmbassyCrates::Time => "embassy-time",
+        }
+        .to_owned()
+    }
+}
+
+impl EmbassyCrates {
+    pub fn default_crates() -> Vec<Self> {
+        [Self::Executor, Self::Time, Self::Sync, Self::Futures].into()
+    }
+}

@@ -4,6 +4,8 @@ use cargo_generate::{GenerateArgs, TemplatePath};
 
 use crate::git::Git;
 
+use super::data::EmbassyCrates;
+
 pub struct GeneratorConfig {
     pub name: String,
     pub vendor: String,
@@ -45,7 +47,21 @@ pub async fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
         definitions.push(format!("commit={}", commit))
     }
 
-    // TODO: add toolchain version
+    let mut default_crates = EmbassyCrates::default_crates();
+
+    match cfg.vendor.to_lowercase().as_str() {
+        "st" => default_crates.push(EmbassyCrates::Stm32),
+        "nrf" => default_crates.push(EmbassyCrates::Nrf),
+        "rp" => default_crates.push(EmbassyCrates::Rp),
+        _ => unreachable!(),
+    }
+
+    for embassy_crate in default_crates {
+        let name: String = embassy_crate.into();
+        let version = Git::get_crate_version(&name).await?;
+        definitions.push(format!("versions_{}={}", name, version));
+    }
+
     let args = GenerateArgs {
         template_path,
         silent: true,
