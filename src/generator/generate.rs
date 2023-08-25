@@ -7,9 +7,10 @@ pub struct GeneratorConfig {
     pub vendor: String,
     pub mcu: String,
     pub target: String,
+    pub no_pin: bool,
 }
 
-pub fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
+pub async fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
     #[cfg(debug_assertions)]
     let template_path = TemplatePath {
         path: Some("./template".to_owned()),
@@ -23,16 +24,42 @@ pub fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
         ..Default::default()
     };
 
+    let latest_commit = if !cfg.no_pin {
+        let gh = octocrab::instance();
+        let repo = gh.repos("embassy-rs", "embassy");
+
+        let latest_commit = repo
+            .list_commits()
+            .per_page(1)
+            .send()
+            .await?
+            .items
+            .first()
+            .expect("no commits in repo")
+            .sha
+            .clone();
+
+        Some(latest_commit)
+    } else {
+        None
+    };
+
+    let mut definitions = vec![
+        format!("vendor={}", cfg.vendor),
+        format!("mcu={}", cfg.mcu),
+        format!("target={}", cfg.target),
+    ];
+
+    if let Some(commit) = latest_commit {
+        definitions.push(format!("commit={}", commit))
+    }
+
     let args = GenerateArgs {
         template_path,
         silent: true,
         verbose: true,
         name: Some(cfg.name),
-        define: vec![
-            format!("vendor={}", cfg.vendor),
-            format!("mcu={}", cfg.mcu),
-            format!("target={}", cfg.target),
-        ],
+        define: definitions,
         ..Default::default()
     };
 

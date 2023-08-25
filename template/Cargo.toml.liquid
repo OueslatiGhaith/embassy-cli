@@ -28,13 +28,13 @@ futures = { version = "0.3.17", default-features = false, features = ["async-awa
 
 [patch.crates-io]
 {% if vendor == "ST" %}
-embassy-stm32 = { git = "https://github.com/embassy-rs/embassy" }
+embassy-stm32 = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
 {% elsif vendor == "Nordic" %}
-embassy-nrf = { git = "https://github.com/embassy-rs/embassy" }
+embassy-nrf = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
 {% elsif vendor == "Raspberry" %}
-embassy-rp = { git = "https://github.com/embassy-rs/embassy" }
+embassy-rp = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
 {% endif %}
-embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy" }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
+embassy-time = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" {% if commit %}, commit = "{{ commit }}" {% endif %} }

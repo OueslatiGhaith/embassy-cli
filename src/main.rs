@@ -13,24 +13,31 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Command {
     /// create a new Embassy project
-    Create {
-        /// Project name
-        #[clap(short, long)]
-        name: Option<String>,
-        /// Vendor
-        #[clap(short, long)]
-        vendor: Option<String>,
-        /// MCU
-        #[clap(short, long)]
-        mcu: Option<String>,
-    },
+    Create(CreateCommand),
 }
 
-fn main() -> anyhow::Result<()> {
+#[derive(Parser)]
+pub struct CreateCommand {
+    /// Project name
+    #[clap(short, long)]
+    name: Option<String>,
+    /// Vendor
+    #[clap(short, long)]
+    vendor: Option<String>,
+    /// MCU
+    #[clap(short, long)]
+    mcu: Option<String>,
+    /// Do not pin to the latest commit of the Embassy crate
+    #[clap(long)]
+    no_pin: bool,
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Create { name, vendor, mcu } => create(name, vendor, mcu)?,
+        Command::Create(cmd) => create(cmd).await?,
     }
 
     Ok(())
