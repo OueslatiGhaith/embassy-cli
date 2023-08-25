@@ -5,43 +5,31 @@ pub struct Git;
 
 impl Git {
     pub async fn get_latest_commit() -> anyhow::Result<String> {
-        let gh = octocrab::instance();
-        let repo = gh.repos("embassy-rs", "embassy");
-
-        let latest_commit = repo
-            .list_commits()
-            .per_page(1)
-            .send()
+        let raw_commit = reqwest::get("https://github.com/embassy-rs/embassy/commit/main.patch")
             .await?
-            .items
-            .first()
-            .ok_or(anyhow!("no commits in repo"))?
-            .sha
-            .clone();
+            .text()
+            .await?;
 
-        Ok(latest_commit)
+        let sha = raw_commit
+            .lines()
+            .find(|line| line.starts_with("From "))
+            .unwrap()
+            .split_whitespace()
+            .nth(1)
+            .ok_or(anyhow!("Could not find commit SHA"))?;
+
+        Ok(sha.to_owned())
     }
 
     pub async fn get_toolchain_channel() -> anyhow::Result<String> {
-        let gh = octocrab::instance();
-        let repo = gh.repos("embassy-rs", "embassy");
+        let raw_toml_file = reqwest::get(
+            "https://raw.githubusercontent.com/embassy-rs/embassy/main/rust-toolchain.toml",
+        )
+        .await?
+        .text()
+        .await?;
 
-        let content = repo
-            .get_content()
-            .path("rust-toolchain.toml")
-            .send()
-            .await?;
-
-        let toolchain_file = content
-            .items
-            .first()
-            .ok_or(anyhow!("no rust-toolchain.toml in repo"))?;
-
-        let toolchain_file = toolchain_file
-            .decoded_content()
-            .ok_or(anyhow!("rust-toolchain.toml is not a valid UTF-8 file"))?;
-
-        let toolchain_file: RustToolchain = toml::from_str(&toolchain_file)?;
+        let toolchain_file: RustToolchain = toml::from_str(&raw_toml_file)?;
 
         Ok(toolchain_file._toolchain._channel)
     }
