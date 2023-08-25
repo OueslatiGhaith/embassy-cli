@@ -2,6 +2,8 @@ use std::io::Write;
 
 use cargo_generate::{GenerateArgs, TemplatePath};
 
+use crate::git::Git;
+
 pub struct GeneratorConfig {
     pub name: String,
     pub vendor: String,
@@ -25,35 +27,25 @@ pub async fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {
     };
 
     let latest_commit = if !cfg.no_pin {
-        let gh = octocrab::instance();
-        let repo = gh.repos("embassy-rs", "embassy");
-
-        let latest_commit = repo
-            .list_commits()
-            .per_page(1)
-            .send()
-            .await?
-            .items
-            .first()
-            .expect("no commits in repo")
-            .sha
-            .clone();
-
-        Some(latest_commit)
+        Some(Git::get_latest_commit().await?)
     } else {
         None
     };
+
+    let toolchain_channel = Git::get_toolchain_channel().await?;
 
     let mut definitions = vec![
         format!("vendor={}", cfg.vendor),
         format!("mcu={}", cfg.mcu),
         format!("target={}", cfg.target),
+        format!("toolchain_channel={}", toolchain_channel),
     ];
 
     if let Some(commit) = latest_commit {
         definitions.push(format!("commit={}", commit))
     }
 
+    // TODO: add toolchain version
     let args = GenerateArgs {
         template_path,
         silent: true,

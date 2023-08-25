@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use generator::create;
 
 mod generator;
+mod git;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

@@ -1,4 +1,4 @@
 [toolchain]
-channel = "nightly"
+channel = "{{ toolchain_channel }}"
 components = [ "rust-src", "rustfmt", "llvm-tools" ]
-targets = ["{{ target }}"]
+targets = [ "{{ target }}" ]
