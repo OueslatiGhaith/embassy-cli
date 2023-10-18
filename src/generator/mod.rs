@@ -4,6 +4,7 @@ use self::{data::DATA, generate::GeneratorConfig};
 
 mod data;
 mod generate;
+mod templates;
 
 pub async fn create(cmd: CreateCommand) -> anyhow::Result<()> {
     let name = if let Some(name) = cmd.name {
