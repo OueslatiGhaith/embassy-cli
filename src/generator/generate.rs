@@ -8,6 +8,7 @@ pub struct GeneratorConfig {
     pub mcu: String,
     pub target: String,
     pub no_pin: bool,
+    pub workspace: bool,
 }
 
 pub async fn create(cfg: GeneratorConfig) -> anyhow::Result<()> {

@@ -59,16 +59,46 @@ enum Template {
 
 impl Template {
     async fn root(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
-        Ok(Template::Dir {
-            name: cfg.name.clone(),
-            children: Vec::from([
+        let children = match cfg.workspace {
+            true => Vec::from([
+                Template::dot_cargo(cfg).await?,
+                Template::Dir {
+                    name: "crates".into(),
+                    children: Vec::from([
+                        Template::Dir {
+                            name: "app".into(),
+                            children: Vec::from([
+                                Template::app_src(cfg).await?,
+                                Template::build_rs(cfg).await?,
+                                Template::app_cargo_toml(cfg).await?,
+                            ]),
+                        },
+                        Template::Dir {
+                            name: "my_lib".into(),
+                            children: Vec::from([
+                                Template::lib_src(cfg).await?,
+                                Template::lib_cargo_toml(cfg).await?,
+                            ]),
+                        },
+                    ]),
+                },
+                Template::dot_gitignore(cfg).await?,
+                Template::workspace_cargo_toml(cfg).await?,
+                Template::rust_toolchain(cfg).await?,
+            ]),
+            false => Vec::from([
                 Template::dot_cargo(cfg).await?,
                 Template::app_src(cfg).await?,
                 Template::dot_gitignore(cfg).await?,
                 Template::build_rs(cfg).await?,
-                Template::root_cargo_toml(cfg).await?,
+                Template::app_cargo_toml(cfg).await?,
                 Template::rust_toolchain(cfg).await?,
             ]),
+        };
+
+        Ok(Template::Dir {
+            name: cfg.name.clone(),
+            children,
         })
     }
 
@@ -95,7 +125,7 @@ DEFMT_LOG = "trace""#
     }
 
     async fn app_src(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
-        let embassy_crate = vendor_to_crate(&cfg.vendor);
+        let embassy_crate = vendor_to_crate(&cfg.vendor).replace("-", "_");
 
         Ok(Template::Dir {
             name: "src".into(),
@@ -146,20 +176,14 @@ async fn main(_spawner: Spawner) {{
         })
     }
 
-    async fn root_cargo_toml(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
+    async fn app_cargo_toml(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
         let name = cfg.name.as_str();
-        let embassy_crate = vendor_to_crate(&cfg.vendor);
-        let crate_decl = crate_declaration(&cfg.vendor, &cfg.mcu).await?;
-        let commit = if cfg.no_pin {
+        let crate_decl = crate_declaration(cfg, !cfg.workspace).await?;
+        let patch = if cfg.workspace {
             "".into()
         } else {
-            let hash = Git::get_latest_commit().await?;
-            format!(r#"commit = "{hash}""#)
+            crates_io_patch(cfg).await?
         };
-        let version_executor = Git::get_crate_version("embassy-executor").await?;
-        let version_time = Git::get_crate_version("embassy-time").await?;
-        let version_sync = Git::get_crate_version("embassy-sync").await?;
-        let version_futures = Git::get_crate_version("embassy-futures").await?;
 
         Ok(Template::File {
             name: "Cargo.toml".into(),
@@ -171,10 +195,6 @@ edition = "2021"
 
 [dependencies]
 {crate_decl}
-embassy-executor = {{ version = "{version_executor}", features = ["nightly", "arch-cortex-m", "executor-thread", "integrated-timers"] }}
-embassy-time = {{ version = "{version_time}", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }}
-embassy-sync = {{ version = "{version_sync}", features = ["defmt"] }}
-embassy-futures = {{ version = "{version_futures}" }}
 
 panic-probe = {{ version = "0.3" }}
 
@@ -186,12 +206,7 @@ cortex-m-rt = "0.7.0"
 
 futures = {{ version = "0.3.17", default-features = false, features = ["async-await"] }}
 
-[patch.crates-io]
-{embassy_crate} = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
-embassy-executor = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
-embassy-time = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
-embassy-sync = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
-embassy-futures = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}"#
+{patch}"#
             ),
         })
     }
@@ -207,6 +222,48 @@ embassy-futures = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}"
 channel = "{channel}"
 components = [ "rust-src", "rustfmt", "llvm-tools" ]
 targets = [ "{target}" ]"#
+            ),
+        })
+    }
+
+    async fn lib_src(_cfg: &GeneratorConfig) -> anyhow::Result<Self> {
+        Ok(Template::Dir {
+            name: "src".into(),
+            children: Vec::from([Template::File {
+                name: "lib.rs".into(),
+                content: "#![no_std]".into(),
+            }]),
+        })
+    }
+
+    async fn lib_cargo_toml(_cfg: &GeneratorConfig) -> anyhow::Result<Self> {
+        Ok(Template::File {
+            name: "Cargo.toml".into(),
+            content: r#"[package]
+name = "my_lib"
+version = "0.1.0"
+edition = "2021"
+            
+[dependencies]"#
+                .into(),
+        })
+    }
+
+    async fn workspace_cargo_toml(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
+        let crate_decl = crate_declaration(cfg, true).await?;
+        let patch = crates_io_patch(cfg).await?;
+
+        Ok(Template::File {
+            name: "Cargo.toml".into(),
+            content: format!(
+                r#"[workspace]
+members = ["crates/*"]
+default-members = ["crates/app"]
+            
+[workspace.dependencies]
+{crate_decl}
+            
+{patch}"#
             ),
         })
     }
@@ -250,22 +307,74 @@ fn vendor_to_crate(vendor: &str) -> &str {
     }
 }
 
-async fn crate_declaration(vendor: &str, mcu: &str) -> anyhow::Result<String> {
-    let embassy_crate = vendor_to_crate(vendor);
+async fn crate_declaration(cfg: &GeneratorConfig, is_crate_root: bool) -> anyhow::Result<String> {
+    let embassy_crate = vendor_to_crate(&cfg.vendor);
     let version = Git::get_crate_version(embassy_crate).await?;
+    let mcu = cfg.mcu.as_str();
 
-    let r = match vendor.to_lowercase().as_str() {
-        "st" => format!(
-            r#"embassy-stm32 = {{ version = "{version}", features = ["nightly", "defmt", "time-driver-any", "{mcu}", "memory-x", "exti"] }}"#
-        ),
-        "nrf" => format!(
-            r#"embassy-nrf = {{ version = "{version}", features = ["nightly", "defmt", "{mcu}", "time-driver-rtc1", "gpiote"] }}"#
-        ),
-        "rp" => format!(
-            r#"embassy-rp = {{ version = "{version}", features = ["defmt", "nightly", "time-driver"] }}"#
-        ),
-        _ => unreachable!(),
+    let r = if is_crate_root {
+        let mut r = match cfg.vendor.to_lowercase().as_str() {
+            "st" => format!(
+                r#"embassy-stm32 = {{ version = "{version}", features = ["nightly", "defmt", "time-driver-any", "{mcu}", "memory-x", "exti"] }}"#
+            ),
+            "nrf" => format!(
+                r#"embassy-nrf = {{ version = "{version}", features = ["nightly", "defmt", "{mcu}", "time-driver-rtc1", "gpiote"] }}"#
+            ),
+            "rp" => format!(
+                r#"embassy-rp = {{ version = "{version}", features = ["defmt", "nightly", "time-driver"] }}"#
+            ),
+            _ => unreachable!(),
+        };
+
+        let version_executor = Git::get_crate_version("embassy-executor").await?;
+        let version_time = Git::get_crate_version("embassy-time").await?;
+        let version_sync = Git::get_crate_version("embassy-sync").await?;
+        let version_futures = Git::get_crate_version("embassy-futures").await?;
+
+        r.push_str(&format!(r#"
+embassy-executor = {{ version = "{version_executor}", features = ["nightly", "arch-cortex-m", "executor-thread", "integrated-timers"] }}
+embassy-time = {{ version = "{version_time}", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }}
+embassy-sync = {{ version = "{version_sync}", features = ["defmt"] }}
+embassy-futures = {{ version = "{version_futures}" }}"#));
+
+        r
+    } else {
+        let mut r = match cfg.vendor.to_lowercase().as_str() {
+            "st" => format!(r#"embassy-stm32 = {{ workspace = true }}"#),
+            "nrf" => format!(r#"embassy-nrf = {{ workspace = true }}"#),
+            "rp" => format!(r#"embassy-rp = {{ workspace = true }}"#),
+            _ => unreachable!(),
+        };
+
+        r.push_str(
+            r#"
+embassy-executor = { workspace = true }
+embassy-time = { workspace = true }
+embassy-sync = { workspace = true }
+embassy-futures = { workspace = true }"#,
+        );
+
+        r
     };
 
     Ok(r)
+}
+
+async fn crates_io_patch(cfg: &GeneratorConfig) -> anyhow::Result<String> {
+    let embassy_crate = vendor_to_crate(&cfg.vendor);
+    let commit = if cfg.no_pin {
+        "".into()
+    } else {
+        let hash = Git::get_latest_commit().await?;
+        format!(r#"commit = "{hash}""#)
+    };
+
+    Ok(format!(
+        r#"[patch.crates-io]
+{embassy_crate} = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
+embassy-executor = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
+embassy-time = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
+embassy-sync = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}
+embassy-futures = {{ git = "https://github.com/embassy-rs/embassy", {commit} }}"#
+    ))
 }

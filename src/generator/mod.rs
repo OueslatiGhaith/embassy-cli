@@ -35,6 +35,7 @@ pub async fn create(cmd: CreateCommand) -> anyhow::Result<()> {
         mcu,
         target,
         no_pin: cmd.no_pin,
+        workspace: cmd.workspace,
     };
     generate::create(config).await?;
 

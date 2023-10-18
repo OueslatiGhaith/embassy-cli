@@ -31,6 +31,9 @@ pub struct CreateCommand {
     /// Do not pin to the latest commit of the Embassy crate
     #[clap(long)]
     no_pin: bool,
+    /// Create project in a workspace
+    #[clap(long)]
+    workspace: bool,
 }
 
 #[tokio::main]
