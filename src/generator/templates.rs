@@ -1,4 +1,7 @@
-use std::{io::Write, path::PathBuf};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use crate::git::Git;
 
@@ -32,7 +35,7 @@ impl TemplateBuilder {
     }
 
     pub fn build(&self) -> anyhow::Result<PathBuf> {
-        for item in self.root.flatten(&".".into()) {
+        for item in self.root.flatten(Path::new(".")) {
             match item {
                 TemplateItem::Dir { path } => std::fs::DirBuilder::new().create(path)?,
                 TemplateItem::File { content, path } => {
@@ -141,7 +144,7 @@ DEFMT_LOG = "trace""#
     }
 
     async fn app_src(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
-        let embassy_crate = vendor_to_crate(&cfg.vendor).replace("-", "_");
+        let embassy_crate = vendor_to_crate(&cfg.vendor).replace('-', "_");
 
         Ok(Template::Dir {
             name: "src".into(),
@@ -285,8 +288,8 @@ resolver = "2"
         })
     }
 
-    fn flatten(&self, root_path: &PathBuf) -> Vec<TemplateItem> {
-        fn traverse(node: &Template, path: &PathBuf, stack: &mut Vec<TemplateItem>) {
+    fn flatten(&self, root_path: &Path) -> Vec<TemplateItem> {
+        fn traverse(node: &Template, path: &Path, stack: &mut Vec<TemplateItem>) {
             match node {
                 Template::File { name, content } => stack.push(TemplateItem::File {
                     content: content.clone(),
@@ -356,10 +359,10 @@ embassy-futures = {{ version = "{version_futures}" }}"#));
 
         r
     } else {
-        let mut r = match cfg.vendor.to_lowercase().as_str() {
-            "st" => format!(r#"embassy-stm32 = {{ workspace = true }}"#),
-            "nrf" => format!(r#"embassy-nrf = {{ workspace = true }}"#),
-            "rp" => format!(r#"embassy-rp = {{ workspace = true }}"#),
+        let mut r: String = match cfg.vendor.to_lowercase().as_str() {
+            "st" => r#"embassy-stm32 = { workspace = true }"#.into(),
+            "nrf" => r#"embassy-nrf = { workspace = true }"#.into(),
+            "rp" => r#"embassy-rp = { workspace = true }"#.into(),
             _ => unreachable!(),
         };
 
