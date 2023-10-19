@@ -275,6 +275,7 @@ edition = "2021"
                 r#"[workspace]
 members = ["crates/*"]
 default-members = ["crates/app"]
+resolver = "2"
             
 [workspace.dependencies]
 {crate_decl}
