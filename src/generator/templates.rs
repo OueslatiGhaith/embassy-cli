@@ -366,7 +366,7 @@ async fn crates_io_patch(cfg: &GeneratorConfig) -> anyhow::Result<String> {
         "".into()
     } else {
         let hash = Git::get_latest_commit().await?;
-        format!(r#"commit = "{hash}""#)
+        format!(r#"rev = "{hash}""#)
     };
 
     Ok(format!(
