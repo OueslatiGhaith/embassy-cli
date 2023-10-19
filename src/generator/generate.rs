@@ -1,10 +1,12 @@
 use std::io::Write;
 
+use crate::commands::create::Vendor;
+
 use super::templates::TemplateBuilder;
 
 pub struct GeneratorConfig {
     pub name: String,
-    pub vendor: String,
+    pub vendor: Vendor,
     pub mcu: String,
     pub target: String,
     pub no_pin: bool,

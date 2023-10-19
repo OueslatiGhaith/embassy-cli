@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::git::Git;
+use crate::{commands::create::Vendor, git::Git};
 
 use super::generate::GeneratorConfig;
 
@@ -144,7 +144,7 @@ DEFMT_LOG = "trace""#
     }
 
     async fn app_src(cfg: &GeneratorConfig) -> anyhow::Result<Self> {
-        let embassy_crate = vendor_to_crate(&cfg.vendor).replace('-', "_");
+        let embassy_crate = vendor_to_crate(cfg.vendor).replace('-', "_");
 
         Ok(Template::Dir {
             name: "src".into(),
@@ -318,22 +318,25 @@ enum TemplateItem {
     Dir { path: PathBuf },
 }
 
-fn vendor_to_crate(vendor: &str) -> &str {
-    match vendor.to_lowercase().as_str() {
+fn vendor_to_crate(vendor: Vendor) -> String {
+    let vendor_str: String = vendor.into();
+    match vendor_str.to_lowercase().as_str() {
         "st" => "embassy-stm32",
         "nrf" => "embassy-nrf",
         "rp" => "embassy-rp",
         _ => unreachable!(),
     }
+    .into()
 }
 
 async fn crate_declaration(cfg: &GeneratorConfig, is_crate_root: bool) -> anyhow::Result<String> {
-    let embassy_crate = vendor_to_crate(&cfg.vendor);
+    let embassy_crate = vendor_to_crate(cfg.vendor);
     let version = Git::get_crate_version(embassy_crate).await?;
     let mcu = cfg.mcu.as_str();
 
     let r = if is_crate_root {
-        let mut r = match cfg.vendor.to_lowercase().as_str() {
+        let vendor_str: String = cfg.vendor.into();
+        let mut r = match vendor_str.to_lowercase().as_str() {
             "st" => format!(
                 r#"embassy-stm32 = {{ version = "{version}", features = ["nightly", "defmt", "time-driver-any", "{mcu}", "memory-x", "exti"] }}"#
             ),
@@ -359,7 +362,8 @@ embassy-futures = {{ version = "{version_futures}" }}"#));
 
         r
     } else {
-        let mut r: String = match cfg.vendor.to_lowercase().as_str() {
+        let vendor_str: String = cfg.vendor.into();
+        let mut r: String = match vendor_str.to_lowercase().as_str() {
             "st" => r#"embassy-stm32 = { workspace = true }"#.into(),
             "nrf" => r#"embassy-nrf = { workspace = true }"#.into(),
             "rp" => r#"embassy-rp = { workspace = true }"#.into(),
@@ -381,7 +385,7 @@ embassy-futures = { workspace = true }"#,
 }
 
 async fn crates_io_patch(cfg: &GeneratorConfig) -> anyhow::Result<String> {
-    let embassy_crate = vendor_to_crate(&cfg.vendor);
+    let embassy_crate = vendor_to_crate(cfg.vendor);
     let commit = if cfg.no_pin {
         "".into()
     } else {

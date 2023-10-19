@@ -1,17 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+use crate::commands::create::Vendor;
+
 lazy_static::lazy_static! {
     pub static ref DATA: Data = serde_json::from_str(include_str!("../../data/mcu_list.json")).unwrap();
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
-    vendors: Vec<Vendor>,
+    vendors: Vec<DataVendor>,
     flavors: Vec<Flavor>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Vendor {
+pub struct DataVendor {
     name: String,
     mcu_list: Vec<String>,
 }
@@ -32,14 +34,15 @@ impl Data {
             .collect::<Vec<String>>()
     }
 
-    pub fn mcu_list(&self, vendor: &str) -> anyhow::Result<Vec<String>> {
+    pub fn mcu_list(&self, vendor: Vendor) -> anyhow::Result<Vec<String>> {
+        let vendor_str: String = vendor.into();
         for v in &self.vendors {
-            if v.name == vendor {
+            if v.name == vendor_str {
                 return Ok(v.mcu_list.clone());
             }
         }
 
-        anyhow::bail!("No MCU list found for vendor: {}", vendor);
+        anyhow::bail!("No MCU list found for vendor: {:?}", vendor);
     }
 
     pub fn target(&self, mcu: &str) -> anyhow::Result<String> {
@@ -53,9 +56,9 @@ impl Data {
         anyhow::bail!("No target found for MCU: {}", mcu);
     }
 
-    pub fn validate(&self, vendor: &str, mcu: &str) -> anyhow::Result<()> {
-        if !self.vendor_list().contains(&vendor.to_owned()) {
-            anyhow::bail!("Invalid vendor: {}", vendor);
+    pub fn validate(&self, vendor: Vendor, mcu: &str) -> anyhow::Result<()> {
+        if !self.vendor_list().contains(&vendor.into()) {
+            anyhow::bail!("Invalid vendor: {:?}", vendor);
         }
 
         if !self.mcu_list(vendor)?.contains(&mcu.to_owned()) {

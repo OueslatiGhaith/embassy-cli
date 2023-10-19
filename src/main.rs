@@ -1,5 +1,5 @@
 use clap::Parser;
-use commands::{completions::completions, create::create, Command};
+use commands::{completion::completions, create::create, Command};
 
 mod commands;
 mod generator;
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Command::Create(cc) => create(cc).await?,
-        Command::Completions(cc) => completions(cc),
+        Command::Completion(cc) => completions(cc),
     }
 
     Ok(())

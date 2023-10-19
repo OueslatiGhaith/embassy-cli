@@ -1,13 +1,14 @@
 use clap::Subcommand;
 
-use self::{completions::CompletionsCommand, create::CreateCommand};
+use self::{completion::CompletionCommand, create::CreateCommand};
 
-pub mod completions;
+pub mod completion;
 pub mod create;
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// create a new Embassy project
+    /// Create a new Embassy project
     Create(CreateCommand),
-    Completions(CompletionsCommand),
+    /// Generate shell completions
+    Completion(CompletionCommand),
 }
