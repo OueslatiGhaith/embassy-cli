@@ -62,6 +62,7 @@ impl Template {
         let children = match cfg.workspace {
             true => Vec::from([
                 Template::dot_cargo(cfg).await?,
+                Template::dot_vscode(cfg).await?,
                 Template::Dir {
                     name: "crates".into(),
                     children: Vec::from([
@@ -88,6 +89,7 @@ impl Template {
             ]),
             false => Vec::from([
                 Template::dot_cargo(cfg).await?,
+                Template::dot_vscode(cfg).await?,
                 Template::app_src(cfg).await?,
                 Template::dot_gitignore(cfg).await?,
                 Template::build_rs(cfg).await?,
@@ -120,6 +122,20 @@ target = "{target}"
 [env]
 DEFMT_LOG = "trace""#
                 ),
+            }],
+        })
+    }
+
+    async fn dot_vscode(_cfg: &GeneratorConfig) -> anyhow::Result<Self> {
+        Ok(Template::Dir {
+            name: ".vscode".into(),
+            children: vec![Template::File {
+                name: "settings.json".into(),
+                content: r#"{
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "rust-analyzer.checkOnSave.allTargets": false
+}"#
+                .into(),
             }],
         })
     }
