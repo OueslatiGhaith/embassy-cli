@@ -138,7 +138,7 @@ DEFMT_LOG = "trace""#
     "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
     "rust-analyzer.checkOnSave.allTargets": false
 }"#
-                .into(),
+                    .into(),
             }],
         })
     }
@@ -191,7 +191,7 @@ async fn main(_spawner: Spawner) {{
     println!("cargo:rustc-link-arg-bins=-Tlink.x");
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 }"#
-            .into(),
+                .into(),
         })
     }
 
@@ -319,14 +319,12 @@ enum TemplateItem {
 }
 
 fn vendor_to_crate(vendor: Vendor) -> String {
-    let vendor_str: String = vendor.into();
-    match vendor_str.to_lowercase().as_str() {
-        "st" => "embassy-stm32",
-        "nrf" => "embassy-nrf",
-        "rp" => "embassy-rp",
-        _ => unreachable!(),
+    match vendor {
+        Vendor::St => "embassy-stm32",
+        Vendor::Nrf => "embassy-nrf",
+        Vendor::Rp => "embassy-rp",
     }
-    .into()
+        .into()
 }
 
 async fn crate_declaration(cfg: &GeneratorConfig, is_crate_root: bool) -> anyhow::Result<String> {
@@ -335,18 +333,16 @@ async fn crate_declaration(cfg: &GeneratorConfig, is_crate_root: bool) -> anyhow
     let mcu = cfg.mcu.as_str();
 
     let r = if is_crate_root {
-        let vendor_str: String = cfg.vendor.into();
-        let mut r = match vendor_str.to_lowercase().as_str() {
-            "st" => format!(
+        let mut r = match cfg.vendor {
+            Vendor::St => format!(
                 r#"embassy-stm32 = {{ version = "{version}", features = ["nightly", "defmt", "time-driver-any", "{mcu}", "memory-x", "exti"] }}"#
             ),
-            "nrf" => format!(
+            Vendor::Nrf => format!(
                 r#"embassy-nrf = {{ version = "{version}", features = ["nightly", "defmt", "{mcu}", "time-driver-rtc1", "gpiote"] }}"#
             ),
-            "rp" => format!(
+            Vendor::Rp => format!(
                 r#"embassy-rp = {{ version = "{version}", features = ["defmt", "nightly", "time-driver"] }}"#
             ),
-            _ => unreachable!(),
         };
 
         let version_executor = Git::get_crate_version("embassy-executor").await?;
@@ -362,12 +358,10 @@ embassy-futures = {{ version = "{version_futures}" }}"#));
 
         r
     } else {
-        let vendor_str: String = cfg.vendor.into();
-        let mut r: String = match vendor_str.to_lowercase().as_str() {
-            "st" => r#"embassy-stm32 = { workspace = true }"#.into(),
-            "nrf" => r#"embassy-nrf = { workspace = true }"#.into(),
-            "rp" => r#"embassy-rp = { workspace = true }"#.into(),
-            _ => unreachable!(),
+        let mut r: String = match cfg.vendor {
+            Vendor::St => r#"embassy-stm32 = { workspace = true }"#.into(),
+            Vendor::Nrf => r#"embassy-nrf = { workspace = true }"#.into(),
+            Vendor::Rp => r#"embassy-rp = { workspace = true }"#.into(),
         };
 
         r.push_str(
