@@ -6,15 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.72"
-clap = { version = "4.2.7", features = ["derive"] }
-clap_complete = "4.4.3"
-inquire = "0.6.2"
+anyhow = "1.0.80"
+clap = { version = "4.5.1", features = ["derive"] }
+clap_complete = "4.5.1"
+inquire = "0.7.0"
 lazy_static = "1.4.0"
-regex = "1.8.4"
-reqwest = "0.11.20"
-serde = { version = "1.0.183", features = ["derive"] }
-serde_json = "1.0.104"
-tokio = { version = "1.32.0", features = ["full"] }
-toml = "0.7.6"
-toml_edit = "0.19.14"
+regex = "1.10.3"
+reqwest = "0.11.24"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+tokio = { version = "1.36.0", features = ["full"] }
+toml = "0.8.10"
+toml_edit = "0.22.6"
